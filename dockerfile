@@ -13,9 +13,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg2 \
     unixodbc \
     unixodbc-dev \
+    unixodbc-utf16 \
+    libodbc1 \
+    odbcinst1debian2 \
+    odbc-postgresql \
+    tdsodbc \
     freetds-dev \
     freetds-bin \
-    tdsodbc \
     gcc \
     g++ \
     && rm -rf /var/lib/apt/lists/*
@@ -26,16 +30,22 @@ RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
 
 # Instalar el driver ODBC de Microsoft
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
+    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends \
         msodbcsql17 \
         mssql-tools \
+        unixodbc-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Asegurarse de que el driver ODBC esté configurado correctamente
-RUN echo "[ODBC Driver 17 for SQL Server]\nDriver = ODBC Driver 17 for SQL Server\n" >> /etc/odbcinst.ini
+# Configurar odbcinst.ini
+RUN echo "[ODBC Driver 17 for SQL Server]" >> /etc/odbcinst.ini \
+    && echo "Description=Microsoft ODBC Driver 17 for SQL Server" >> /etc/odbcinst.ini \
+    && echo "Driver=/opt/microsoft/msodbcsql17/lib64/libmsodbcsql-17.10.so.2.1" >> /etc/odbcinst.ini \
+    && echo "UsageCount=1" >> /etc/odbcinst.ini \
+    && ln -s /usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so /usr/lib/ \
+    && ln -s /usr/lib/x86_64-linux-gnu/odbc/odbcinst.ini /etc/odbcinst.ini
 
-# Copiar e instalar dependencias de Python
+# Instalar dependencias de Python
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
