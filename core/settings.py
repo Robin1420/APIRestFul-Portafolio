@@ -110,20 +110,43 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'mssql',
-        'NAME': 'portafolio',
-        'USER': 'Robinzon1420_SQLLogin_1',
-        'PASSWORD': '9wjwgl3kvp',
-        'HOST': 'portafolio.mssql.somee.com',
-        'PORT': '1433',
-        'OPTIONS': {
-            'driver': 'ODBC Driver 17 for SQL Server',
-            'extra_params': 'TrustServerCertificate=yes;'
-        },
+# Configuración de la base de datos
+if os.environ.get('RENDER'):
+    # Configuración para producción en Render con Somee
+    db_config = {
+        x: x.split('=')[1] for x in os.environ.get('SOMEE_CONNECTION_STRING', '').split(';') 
+        if '=' in x
     }
-}
+    
+    DATABASES = {
+        'default': {
+            'ENGINE': 'sql_server.pyodbc',
+            'NAME': db_config.get('Database', ''),
+            'USER': db_config.get('User Id', ''),
+            'PASSWORD': db_config.get('Password', ''),
+            'HOST': db_config.get('Server', ''),
+            'PORT': '',
+            'OPTIONS': {
+                'driver': 'ODBC Driver 17 for SQL Server',
+                'extra_params': 'Encrypt=yes;TrustServerCertificate=yes;',
+            },
+        }
+    }
+else:
+    # Tu configuración local actual
+    DATABASES = {
+        'default': {
+            'ENGINE': 'mssql',
+            'NAME': 'tu_bd_local',
+            'USER': 'tu_usuario_local',
+            'PASSWORD': 'tu_contraseña_local',
+            'HOST': 'tu_servidor_local',
+            'PORT': '1433',
+            'OPTIONS': {
+                'driver': 'ODBC Driver 17 for SQL Server',
+            },
+        }
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
