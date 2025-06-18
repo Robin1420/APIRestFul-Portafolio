@@ -118,12 +118,19 @@ DATABASES = {
     }
 }
 
+# Configuración de depuración
+print("=== Configuración de entorno ===")
+print(f"RENDER: {os.environ.get('RENDER')}")
+print(f"SOMEE_CONNECTION_STRING: {'Configurada' if os.environ.get('SOMEE_CONNECTION_STRING') else 'No configurada'}")
+
 # Sobrescribir configuración si estamos en producción (Render)
 if os.environ.get('RENDER'):
+    print("=== Modo producción (Render) detectado ===")
     # Configuración para producción en Render con Somee
     somee_connection = os.environ.get('SOMEE_CONNECTION_STRING', '')
     
     if somee_connection:
+        print("SOMEE_CONNECTION_STRING encontrada")
         try:
             # Parsear la cadena de conexión de Somee
             db_config = {}
@@ -132,6 +139,8 @@ if os.environ.get('RENDER'):
                     key, value = part.split('=', 1)
                     db_config[key.strip().lower()] = value.strip()
             
+            print(f"Parámetros de conexión extraídos: {db_config}")
+            
             # Extraer los parámetros necesarios de la cadena de Somee
             server = db_config.get('data source') or db_config.get('server')
             database = db_config.get('initial catalog') or db_config.get('database')
@@ -139,26 +148,38 @@ if os.environ.get('RENDER'):
             password = db_config.get('pwd') or db_config.get('password')
             
             if server and database and user and password:
-                DATABASES['default'] = {
-                    'ENGINE': 'sql_server.pyodbc',
-                    'NAME': database,
-                    'USER': user,
-                    'PASSWORD': password,
-                    'HOST': server,
-                    'PORT': '',  # Usar el puerto por defecto (1433)
-                    'OPTIONS': {
-                        'driver': 'ODBC Driver 17 for SQL Server',
-                        'extra_params': 'Encrypt=yes;TrustServerCertificate=yes;',
-                    },
+                DATABASES = {
+                    'default': {
+                        'ENGINE': 'sql_server.pyodbc',
+                        'NAME': database,
+                        'USER': user,
+                        'PASSWORD': password,
+                        'HOST': server,
+                        'PORT': '1433',  # Puerto explícito para SQL Server
+                        'OPTIONS': {
+                            'driver': 'ODBC Driver 17 for SQL Server',
+                            'extra_params': 'Encrypt=yes;TrustServerCertificate=yes;',
+                        },
+                    }
                 }
                 print(f"Base de datos configurada para: {database} en {server}")
+                print(f"Configuración DATABASES: {DATABASES}")
             else:
-                print("Advertencia: Faltan parámetros en la cadena de conexión. Usando SQLite.")
-                print(f"Parámetros encontrados: server={server}, database={database}, user={user}")
+                missing = []
+                if not server: missing.append('server')
+                if not database: missing.append('database')
+                if not user: missing.append('user')
+                if not password: missing.append('password')
+                print(f"Error: Faltan parámetros en la cadena de conexión: {', '.join(missing)}")
+                print(f"Cadena de conexión: {somee_connection}")
         except Exception as e:
-            print(f"Error al configurar la base de datos: {str(e)}. Usando SQLite.")
+            import traceback
+            print(f"Error al configurar la base de datos: {str(e)}")
+            print(traceback.format_exc())
     else:
-        print("Advertencia: SOMEE_CONNECTION_STRING no está configurada. Usando SQLite.")
+        print("Error: SOMEE_CONNECTION_STRING no está configurada en las variables de entorno")
+else:
+    print("Modo desarrollo: Usando SQLite")
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators

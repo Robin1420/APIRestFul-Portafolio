@@ -2,6 +2,10 @@ FROM python:3.9-slim
 
 WORKDIR /app
 
+# Variables de entorno para la instalación de ODBC
+ENV ACCEPT_EULA=Y
+ENV DEBIAN_FRONTEND=noninteractive
+
 # Instalar dependencias del sistema necesarias
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -9,6 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg2 \
     unixodbc \
     unixodbc-dev \
+    unixodbc-utf16 \
     freetds-dev \
     freetds-bin \
     tdsodbc \
@@ -22,9 +27,14 @@ RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
 
 # Instalar el driver ODBC de Microsoft
 RUN apt-get update \
-    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql17 \
+    && apt-get install -y --no-install-recommends \
+        msodbcsql17 \
+        mssql-tools \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Asegurarse de que el driver ODBC esté configurado correctamente
+RUN echo "[ODBC Driver 17 for SQL Server]\nDriver = ODBC Driver 17 for SQL Server\n" >> /etc/odbcinst.ini
 
 # Copiar e instalar dependencias de Python
 COPY requirements.txt .
@@ -33,8 +43,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiar el código
 COPY . .
 
+# Hacer ejecutable el script de inicio
+RUN chmod +x /app/startup.sh
+
 # Puerto expuesto
 EXPOSE $PORT
 
 # Comando para ejecutar la aplicación
-CMD ["sh", "-c", "python manage.py migrate && gunicorn core.wsgi:application --bind 0.0.0.0:$PORT"]
+CMD ["./startup.sh"]
