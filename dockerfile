@@ -13,10 +13,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg2 \
     unixodbc \
     unixodbc-dev \
-    unixodbc-utf16 \
     libodbc1 \
     odbcinst1debian2 \
-    odbc-postgresql \
     tdsodbc \
     freetds-dev \
     freetds-bin \
