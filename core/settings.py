@@ -125,28 +125,36 @@ if os.environ.get('RENDER'):
     
     if somee_connection:
         try:
+            # Parsear la cadena de conexión de Somee
             db_config = {}
             for part in somee_connection.split(';'):
                 if '=' in part:
                     key, value = part.split('=', 1)
-                    db_config[key.strip()] = value.strip()
+                    db_config[key.strip().lower()] = value.strip()
             
-            if all(k in db_config for k in ['Server', 'Database', 'User Id', 'Password']):
+            # Extraer los parámetros necesarios de la cadena de Somee
+            server = db_config.get('data source') or db_config.get('server')
+            database = db_config.get('initial catalog') or db_config.get('database')
+            user = db_config.get('user id') or db_config.get('uid')
+            password = db_config.get('pwd') or db_config.get('password')
+            
+            if server and database and user and password:
                 DATABASES['default'] = {
                     'ENGINE': 'sql_server.pyodbc',
-                    'NAME': db_config['Database'],
-                    'USER': db_config['User Id'],
-                    'PASSWORD': db_config['Password'],
-                    'HOST': db_config['Server'],
-                    'PORT': '',
+                    'NAME': database,
+                    'USER': user,
+                    'PASSWORD': password,
+                    'HOST': server,
+                    'PORT': '',  # Usar el puerto por defecto (1433)
                     'OPTIONS': {
                         'driver': 'ODBC Driver 17 for SQL Server',
                         'extra_params': 'Encrypt=yes;TrustServerCertificate=yes;',
                     },
                 }
-                print(f"Base de datos configurada para: {db_config['Database']} en {db_config['Server']}")
+                print(f"Base de datos configurada para: {database} en {server}")
             else:
-                print("Advertencia: La cadena de conexión no tiene todos los campos requeridos. Usando SQLite.")
+                print("Advertencia: Faltan parámetros en la cadena de conexión. Usando SQLite.")
+                print(f"Parámetros encontrados: server={server}, database={database}, user={user}")
         except Exception as e:
             print(f"Error al configurar la base de datos: {str(e)}. Usando SQLite.")
     else:
