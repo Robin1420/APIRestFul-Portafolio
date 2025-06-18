@@ -13,7 +13,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg2 \
     unixodbc \
     unixodbc-dev \
-    unixodbc-utf16 \
     freetds-dev \
     freetds-bin \
     tdsodbc \
