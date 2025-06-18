@@ -111,48 +111,46 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 # Configuración de la base de datos
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    }
+}
+
+# Sobrescribir configuración si estamos en producción (Render)
 if os.environ.get('RENDER'):
     # Configuración para producción en Render con Somee
     somee_connection = os.environ.get('SOMEE_CONNECTION_STRING', '')
-    if not somee_connection:
-        raise ValueError("SOMEE_CONNECTION_STRING no está configurada en las variables de entorno")
     
-    try:
-        db_config = {}
-        for part in somee_connection.split(';'):
-            if '=' in part:
-                key, value = part.split('=', 1)
-                db_config[key.strip()] = value.strip()
-        
-        if not all(k in db_config for k in ['Server', 'Database', 'User Id', 'Password']):
-            raise ValueError("La cadena de conexión debe incluir Server, Database, User Id y Password")
+    if somee_connection:
+        try:
+            db_config = {}
+            for part in somee_connection.split(';'):
+                if '=' in part:
+                    key, value = part.split('=', 1)
+                    db_config[key.strip()] = value.strip()
             
-        DATABASES = {
-            'default': {
-                'ENGINE': 'sql_server.pyodbc',
-                'NAME': db_config['Database'],
-                'USER': db_config['User Id'],
-                'PASSWORD': db_config['Password'],
-                'HOST': db_config['Server'],
-                'PORT': '',
-                'OPTIONS': {
-                    'driver': 'ODBC Driver 17 for SQL Server',
-                    'extra_params': 'Encrypt=yes;TrustServerCertificate=yes;',
-                },
-            }
-        }
-        print(f"Base de datos configurada para: {db_config['Database']} en {db_config['Server']}")
-    except Exception as e:
-        print(f"Error al configurar la base de datos: {str(e)}")
-        raise
-else:
-    # Configuración local de desarrollo
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-        }
-    }
+            if all(k in db_config for k in ['Server', 'Database', 'User Id', 'Password']):
+                DATABASES['default'] = {
+                    'ENGINE': 'sql_server.pyodbc',
+                    'NAME': db_config['Database'],
+                    'USER': db_config['User Id'],
+                    'PASSWORD': db_config['Password'],
+                    'HOST': db_config['Server'],
+                    'PORT': '',
+                    'OPTIONS': {
+                        'driver': 'ODBC Driver 17 for SQL Server',
+                        'extra_params': 'Encrypt=yes;TrustServerCertificate=yes;',
+                    },
+                }
+                print(f"Base de datos configurada para: {db_config['Database']} en {db_config['Server']}")
+            else:
+                print("Advertencia: La cadena de conexión no tiene todos los campos requeridos. Usando SQLite.")
+        except Exception as e:
+            print(f"Error al configurar la base de datos: {str(e)}. Usando SQLite.")
+    else:
+        print("Advertencia: SOMEE_CONNECTION_STRING no está configurada. Usando SQLite.")
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
