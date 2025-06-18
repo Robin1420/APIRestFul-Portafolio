@@ -113,38 +113,44 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Configuración de la base de datos
 if os.environ.get('RENDER'):
     # Configuración para producción en Render con Somee
-    db_config = {
-        x: x.split('=')[1] for x in os.environ.get('SOMEE_CONNECTION_STRING', '').split(';') 
-        if '=' in x
-    }
+    somee_connection = os.environ.get('SOMEE_CONNECTION_STRING', '')
+    if not somee_connection:
+        raise ValueError("SOMEE_CONNECTION_STRING no está configurada en las variables de entorno")
     
-    DATABASES = {
-        'default': {
-            'ENGINE': 'sql_server.pyodbc',
-            'NAME': db_config.get('Database', ''),
-            'USER': db_config.get('User Id', ''),
-            'PASSWORD': db_config.get('Password', ''),
-            'HOST': db_config.get('Server', ''),
-            'PORT': '',
-            'OPTIONS': {
-                'driver': 'ODBC Driver 17 for SQL Server',
-                'extra_params': 'Encrypt=yes;TrustServerCertificate=yes;',
-            },
+    try:
+        db_config = {}
+        for part in somee_connection.split(';'):
+            if '=' in part:
+                key, value = part.split('=', 1)
+                db_config[key.strip()] = value.strip()
+        
+        if not all(k in db_config for k in ['Server', 'Database', 'User Id', 'Password']):
+            raise ValueError("La cadena de conexión debe incluir Server, Database, User Id y Password")
+            
+        DATABASES = {
+            'default': {
+                'ENGINE': 'sql_server.pyodbc',
+                'NAME': db_config['Database'],
+                'USER': db_config['User Id'],
+                'PASSWORD': db_config['Password'],
+                'HOST': db_config['Server'],
+                'PORT': '',
+                'OPTIONS': {
+                    'driver': 'ODBC Driver 17 for SQL Server',
+                    'extra_params': 'Encrypt=yes;TrustServerCertificate=yes;',
+                },
+            }
         }
-    }
+        print(f"Base de datos configurada para: {db_config['Database']} en {db_config['Server']}")
+    except Exception as e:
+        print(f"Error al configurar la base de datos: {str(e)}")
+        raise
 else:
-    # Tu configuración local actual
+    # Configuración local de desarrollo
     DATABASES = {
         'default': {
-            'ENGINE': 'mssql',
-            'NAME': 'tu_bd_local',
-            'USER': 'tu_usuario_local',
-            'PASSWORD': 'tu_contraseña_local',
-            'HOST': 'tu_servidor_local',
-            'PORT': '1433',
-            'OPTIONS': {
-                'driver': 'ODBC Driver 17 for SQL Server',
-            },
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
         }
     }
 
